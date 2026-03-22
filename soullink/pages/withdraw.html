@@ -46,32 +46,21 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ms-blue)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;">
           <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
         </svg>
-        <span>Withdrawals are processed within 3–5 business days to your registered bank account. Minimum: ₹1,000.</span>
+        <span>Withdrawals are sent to your <strong>registered bank account on file</strong>. Processed within 3–5 business days. Minimum: ₹1,000.</span>
       </div>
 
-      <div class="form-group"><label class="form-label">Registered Name</label><input class="form-input" type="text" placeholder="Your registered name"></div>
-      <div class="form-group"><label class="form-label">Registered Email</label><input class="form-input" type="email" placeholder="your@email.com"></div>
-      <div class="form-group"><label class="form-label">Aadhaar (for verification)</label><input class="form-input" type="text" placeholder="XXXX XXXX XXXX"></div>
       <div class="form-group"><label class="form-label">Withdrawal Amount (₹)</label><input class="form-input" type="number" placeholder="Min ₹1,000" min="1000"></div>
       <div class="form-group">
-        <label class="form-label">Withdraw From</label>
-        <select class="form-input" id="withdrawFund">
-          <option>Loading your funds…</option>
+        <label class="form-label">Purpose / Remarks</label>
+        <select class="form-input" id="withdrawPurpose">
+          <option value="Half of Monthly Earnings">Half of Monthly Earnings</option>
+          <option value="Withdraw Monthly Earnings">Withdraw Monthly Earnings</option>
+          <option value="Partial Capital Withdrawal">Partial Capital Withdrawal</option>
+          <option value="Full Capital Withdrawal">Full Capital Withdrawal</option>
         </select>
       </div>
     </div>
     <div>
-      <div class="form-group"><label class="form-label">Bank Account Number</label><input class="form-input" type="text" placeholder="Your bank account number"></div>
-      <div class="form-group"><label class="form-label">IFSC Code</label><input class="form-input" type="text" placeholder="Your bank IFSC"></div>
-      <div class="form-group">
-        <label class="form-label">Purpose</label>
-        <select class="form-input" id="withdrawPurpose">
-          <option>Half of Monthly Earnings</option>
-          <option>Withdraw Monthly Earnings</option>
-          <option>Partial Capital Withdrawal</option>
-          <option>Full Capital Withdrawal</option>
-        </select>
-      </div>
 
       <div class="gcard ms-card-blue" style="margin-bottom:16px;">
         <div style="font-size:12px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Processing Timeline</div>
