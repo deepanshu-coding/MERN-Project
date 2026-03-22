@@ -7,22 +7,85 @@
   <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/shared.css">
   <link rel="icon" type="image/png" href="../assets/brand_logo.png">
+  <style>
+    /* ── Financials two-col → one-col on mobile ── */
+    .fin-content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 768px) {
+      .fin-content-grid { grid-template-columns: 1fr; }
+    }
+
+    /* prevent grid column from blowing past container */
+    .chart-card { min-width: 0; overflow: hidden; }
+
+    /* Holdings rows */
+    .holding-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .holding-row:last-child { border-bottom: none; }
+    .holding-name { font-size: 13.5px; }
+    .holding-right { text-align: right; }
+    .holding-pct  { font-weight: 700; font-size: 14px; }
+    .holding-amt  { font-size: 11px; color: var(--text4); margin-top: 2px; }
+
+    /* Share price scroll */
+    .price-scroll-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 8px 0 4px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border2) transparent;
+    }
+    .price-scroll-wrap::-webkit-scrollbar { height: 4px; }
+    .price-scroll-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    .price-scroll-inner { display: flex; min-width: max-content; }
+    .price-item { text-align: center; min-width: 90px; padding: 10px; }
+    .price-item.current {
+      background: rgba(0,103,184,0.06);
+      border-radius: 6px;
+      border: 1px solid rgba(0,103,184,0.20);
+    }
+    .price-quarter { font-size: 10px; color: var(--text4); font-weight: 600; text-transform: uppercase; }
+    .price-val { font-size: 18px; font-weight: 700; margin-top: 5px; }
+
+    /* scroll hint */
+    .scroll-hint { font-size: 11px; color: var(--text4); margin-bottom: 12px; }
+  </style>
 </head>
 <body>
+
 <div class="ticker-wrap">
   <div class="ticker-label">Live Markets</div>
   <div style="overflow:hidden;flex:1"><div class="ticker-track" id="tickerTrack"></div></div>
 </div>
+
 <nav>
-  <div class="nav-logo" onclick="location.href='index.html'"><img src="../assets/brand_logo.png" alt="SoulLink Co." style="height:32px;width:auto;"></div>
-  <div class="nav-links" id="navLinks">
-    <a class="nav-link" href="index.html">Home</a><a class="nav-link" href="invest.html">Invest</a>
-    <a class="nav-link" href="portfolio.html">Portfolio</a><a class="nav-link" href="withdraw.html">Withdraw</a>
-    <a class="nav-link" href="financials.html">Financials</a><a class="nav-link" href="about.html">About Us</a>
-    <a class="nav-link" href="team.html">Our Team</a><a class="nav-link" href="services.html">Services</a>
-    <a class="nav-link" href="privacy.html">Privacy</a><a class="nav-link" href="terms.html">Terms</a>
+  <div class="nav-logo" onclick="location.href='index.html'">
+    <img src="../assets/brand_logo.png" alt="SoulLink Co." style="height:32px;width:auto;">
   </div>
-  <button class="hamburger" id="hamburger" onclick="toggleNav()"><span></span><span></span><span></span></button>
+  <div class="nav-links" id="navLinks">
+    <a class="nav-link" href="index.html">Home</a>
+    <a class="nav-link" href="invest.html">Invest</a>
+    <a class="nav-link" href="portfolio.html">Portfolio</a>
+    <a class="nav-link" href="withdraw.html">Withdraw</a>
+    <a class="nav-link" href="financials.html">Financials</a>
+    <a class="nav-link" href="about.html">About Us</a>
+    <a class="nav-link" href="team.html">Our Team</a>
+    <a class="nav-link" href="services.html">Services</a>
+    <a class="nav-link" href="privacy.html">Privacy</a>
+    <a class="nav-link" href="terms.html">Terms</a>
+  </div>
+  <button class="hamburger" id="hamburger" onclick="toggleNav()">
+    <span></span><span></span><span></span>
+  </button>
   <div class="nav-actions"></div>
 </nav>
 
@@ -31,18 +94,47 @@
   <p class="section-eyebrow">Transparency</p>
   <h2 class="section-title">Company Financials</h2>
 
+  <!-- Summary stat cards -->
   <div class="fin-grid">
-    <div class="fin-card ms-card-blue"><div class="fin-val">$14.89K</div><div class="fin-lbl">AUM (USD)</div><div class="fin-change" style="color:var(--green);">↑ +12.4% YoY</div></div>
-    <div class="fin-card ms-card-blue"><div class="fin-val">96%</div><div class="fin-lbl">Profit Margin</div><div class="fin-change" style="color:var(--green);">↑ Consistent</div></div>
-    <div class="fin-card ms-card-teal"><div class="fin-val">$2.1K</div><div class="fin-lbl">Cash Reserves</div><div class="fin-change" style="color:var(--green);">↑ Growing</div></div>
-    <div class="fin-card ms-card-teal"><div class="fin-val">$11.8K</div><div class="fin-lbl">Total Assets</div><div class="fin-change" style="color:var(--green);">↑ +8.2%</div></div>
-    <div class="fin-card"><div class="fin-val">$0.9K</div><div class="fin-lbl">Liabilities</div><div class="fin-change" style="color:var(--red);">↓ Reduced</div></div>
-    <div class="fin-card ms-card-gold"><div class="fin-val">$10.9K</div><div class="fin-lbl">Net Equity</div><div class="fin-change" style="color:var(--green);">↑ Strong</div></div>
+    <div class="fin-card ms-card-blue">
+      <div class="fin-val">$14.89K</div>
+      <div class="fin-lbl">AUM (USD)</div>
+      <div class="fin-change" style="color:var(--green);">&#8593; +12.4% YoY</div>
+    </div>
+    <div class="fin-card ms-card-blue">
+      <div class="fin-val">96%</div>
+      <div class="fin-lbl">Profit Margin</div>
+      <div class="fin-change" style="color:var(--green);">&#8593; Consistent</div>
+    </div>
+    <div class="fin-card ms-card-teal">
+      <div class="fin-val">$2.1K</div>
+      <div class="fin-lbl">Cash Reserves</div>
+      <div class="fin-change" style="color:var(--green);">&#8593; Growing</div>
+    </div>
+    <div class="fin-card ms-card-teal">
+      <div class="fin-val">$11.8K</div>
+      <div class="fin-lbl">Total Assets</div>
+      <div class="fin-change" style="color:var(--green);">&#8593; +8.2%</div>
+    </div>
+    <div class="fin-card">
+      <div class="fin-val">$0.9K</div>
+      <div class="fin-lbl">Liabilities</div>
+      <div class="fin-change" style="color:var(--red);">&#8595; Reduced</div>
+    </div>
+    <div class="fin-card ms-card-gold">
+      <div class="fin-val">$10.9K</div>
+      <div class="fin-lbl">Net Equity</div>
+      <div class="fin-change" style="color:var(--green);">&#8593; Strong</div>
+    </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
-    <div class="gcard">
-      <div style="font-size:16px;font-weight:700;margin-bottom:16px;">Monthly Cash Flow</div>
+  <!-- Chart + Holdings — responsive 2-col grid -->
+  <div class="fin-content-grid">
+
+    <!-- Monthly Cash Flow -->
+    <div class="gcard chart-card">
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Monthly Cash Flow</div>
+      <p class="scroll-hint">Swipe to see all months &rarr;</p>
       <div class="chart-scroll-wrap">
         <div class="chart-scroll-inner">
           <div class="bar-chart" id="cashFlowChart"></div>
@@ -50,51 +142,118 @@
         </div>
       </div>
     </div>
+
+    <!-- Portfolio Holdings -->
     <div class="gcard">
       <div style="font-size:16px;font-weight:700;margin-bottom:16px;">Portfolio Holdings</div>
-      <div style="display:grid;gap:0;">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);"><span style="font-size:13.5px;">Govt. Bonds</span><div style="text-align:right;"><div style="font-weight:700;color:var(--ms-blue);">35%</div><div style="font-size:11px;color:var(--text4);">$5,211</div></div></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);"><span style="font-size:13.5px;">Gold-Silver</span><div style="text-align:right;"><div style="font-weight:700;color:var(--ms-blue);">25%</div><div style="font-size:11px;color:var(--text4);">$3,722</div></div></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);"><span style="font-size:13.5px;">Large Cap Stocks</span><div style="text-align:right;"><div style="font-weight:700;color:var(--gold);">15%</div><div style="font-size:11px;color:var(--text4);">$2,233</div></div></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);"><span style="font-size:13.5px;">Contracts</span><div style="text-align:right;"><div style="font-weight:700;color:var(--ms-teal);">12%</div><div style="font-size:11px;color:var(--text4);">$1,786</div></div></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;"><span style="font-size:13.5px;">Cash & Equivalents</span><div style="text-align:right;"><div style="font-weight:700;color:var(--text3);">13%</div><div style="font-size:11px;color:var(--text4);">$1,935</div></div></div>
+      <div>
+        <div class="holding-row">
+          <span class="holding-name">Govt. Bonds</span>
+          <div class="holding-right">
+            <div class="holding-pct" style="color:var(--ms-blue);">35%</div>
+            <div class="holding-amt">$5,211</div>
+          </div>
+        </div>
+        <div class="holding-row">
+          <span class="holding-name">Gold-Silver</span>
+          <div class="holding-right">
+            <div class="holding-pct" style="color:var(--ms-blue);">25%</div>
+            <div class="holding-amt">$3,722</div>
+          </div>
+        </div>
+        <div class="holding-row">
+          <span class="holding-name">Large Cap Stocks</span>
+          <div class="holding-right">
+            <div class="holding-pct" style="color:var(--gold);">15%</div>
+            <div class="holding-amt">$2,233</div>
+          </div>
+        </div>
+        <div class="holding-row">
+          <span class="holding-name">Contracts</span>
+          <div class="holding-right">
+            <div class="holding-pct" style="color:var(--ms-teal);">12%</div>
+            <div class="holding-amt">$1,786</div>
+          </div>
+        </div>
+        <div class="holding-row">
+          <span class="holding-name">Cash &amp; Equivalents</span>
+          <div class="holding-right">
+            <div class="holding-pct" style="color:var(--text3);">13%</div>
+            <div class="holding-amt">$1,935</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.fin-content-grid -->
+
+  <!-- Share Price History -->
+  <div class="gcard">
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Notional Share Price History</div>
+    <p class="scroll-hint">Swipe to see full history &rarr;</p>
+    <div class="price-scroll-wrap">
+      <div class="price-scroll-inner">
+        <div class="price-item">
+          <div class="price-quarter">Q1 2021</div>
+          <div class="price-val" style="color:var(--text3);">$1.00</div>
+        </div>
+        <div class="price-item">
+          <div class="price-quarter">Q3 2021</div>
+          <div class="price-val" style="color:var(--text3);">$1.24</div>
+        </div>
+        <div class="price-item">
+          <div class="price-quarter">Q1 2022</div>
+          <div class="price-val" style="color:var(--ms-blue);">$1.61</div>
+        </div>
+        <div class="price-item">
+          <div class="price-quarter">Q3 2022</div>
+          <div class="price-val" style="color:var(--ms-blue);">$2.08</div>
+        </div>
+        <div class="price-item">
+          <div class="price-quarter">Q1 2023</div>
+          <div class="price-val" style="color:var(--ms-blue);">$2.73</div>
+        </div>
+        <div class="price-item">
+          <div class="price-quarter">Q3 2023</div>
+          <div class="price-val" style="color:var(--ms-blue);">$3.46</div>
+        </div>
+        <div class="price-item">
+          <div class="price-quarter">Q1 2024</div>
+          <div class="price-val" style="color:var(--gold);">$4.22</div>
+        </div>
+        <div class="price-item">
+          <div class="price-quarter">Q3 2024</div>
+          <div class="price-val" style="color:var(--gold);">$5.19</div>
+        </div>
+        <div class="price-item current">
+          <div class="price-quarter" style="color:var(--ms-blue);font-weight:700;">&#9650; NOW</div>
+          <div class="price-val" style="color:var(--ms-blue);">$6.31</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="gcard">
-    <div style="font-size:16px;font-weight:700;margin-bottom:16px;">Notional Share Price History</div>
-    <div class="hscroll" style="padding:8px 0;">
-      <div style="text-align:center;min-width:90px;padding:10px;"><div style="font-size:10px;color:var(--text4);font-weight:600;text-transform:uppercase;">Q1 2021</div><div style="font-size:18px;font-weight:700;color:var(--text3);margin-top:5px;">$1.00</div></div>
-      <div style="text-align:center;min-width:90px;padding:10px;"><div style="font-size:10px;color:var(--text4);font-weight:600;text-transform:uppercase;">Q3 2021</div><div style="font-size:18px;font-weight:700;color:var(--text3);margin-top:5px;">$1.24</div></div>
-      <div style="text-align:center;min-width:90px;padding:10px;"><div style="font-size:10px;color:var(--text4);font-weight:600;text-transform:uppercase;">Q1 2022</div><div style="font-size:18px;font-weight:700;color:var(--ms-blue);margin-top:5px;">$1.61</div></div>
-      <div style="text-align:center;min-width:90px;padding:10px;"><div style="font-size:10px;color:var(--text4);font-weight:600;text-transform:uppercase;">Q3 2022</div><div style="font-size:18px;font-weight:700;color:var(--ms-blue);margin-top:5px;">$2.08</div></div>
-      <div style="text-align:center;min-width:90px;padding:10px;"><div style="font-size:10px;color:var(--text4);font-weight:600;text-transform:uppercase;">Q1 2023</div><div style="font-size:18px;font-weight:700;color:var(--ms-blue);margin-top:5px;">$2.73</div></div>
-      <div style="text-align:center;min-width:90px;padding:10px;"><div style="font-size:10px;color:var(--text4);font-weight:600;text-transform:uppercase;">Q3 2023</div><div style="font-size:18px;font-weight:700;color:var(--ms-blue);margin-top:5px;">$3.46</div></div>
-      <div style="text-align:center;min-width:90px;padding:10px;"><div style="font-size:10px;color:var(--text4);font-weight:600;text-transform:uppercase;">Q1 2024</div><div style="font-size:18px;font-weight:700;color:var(--gold);margin-top:5px;">$4.22</div></div>
-      <div style="text-align:center;min-width:90px;padding:10px;"><div style="font-size:10px;color:var(--text4);font-weight:600;text-transform:uppercase;">Q3 2024</div><div style="font-size:18px;font-weight:700;color:var(--gold);margin-top:5px;">$5.19</div></div>
-      <div style="text-align:center;min-width:90px;padding:10px;background:rgba(0,103,184,0.06);border-radius:6px;border:1px solid rgba(0,103,184,0.2);">
-        <div style="font-size:10px;color:var(--ms-blue);font-weight:700;text-transform:uppercase;">▲ NOW</div>
-        <div style="font-size:18px;font-weight:700;color:var(--ms-blue);margin-top:5px;">$6.31</div>
-      </div>
-    </div>
-  </div>
-</div>
+</div><!-- /.section -->
 
 <footer>
   <div class="footer-links">
-    <a href="index.html">Home</a><a href="about.html">About</a><a href="team.html">Team</a>
-    <a href="services.html">Services</a><a href="financials.html">Financials</a>
-    <a href="privacy.html">Privacy</a><a href="terms.html">Terms</a>
+    <a href="index.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="team.html">Team</a>
+    <a href="services.html">Services</a>
+    <a href="financials.html">Financials</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
   </div>
-  <div style="font-size:11px;margin-bottom:6px;">© 2024 SoulLink Co. Pvt. Ltd. · Kanpur, Uttar Pradesh · soullinkco.pvt.ltd@gmail.com</div>
+  <div style="font-size:11px;margin-bottom:6px;">&#169; 2024 SoulLink Co. Pvt. Ltd. &middot; Kanpur, Uttar Pradesh &middot; soullinkco.pvt.ltd@gmail.com</div>
   <div class="disc">* Investment returns are targets and not guaranteed. Investing involves risk.</div>
 </footer>
+
 <div id="toast"></div>
 <script src="../js/shared.js"></script>
 <script>
   const months = ['Jan23','Feb23','Mar23','Apr23','May23','Jun23','Jul23','Aug23','Sep23','Oct23','Nov23','Dec23','Jan24','Feb24','Mar24','Apr24','May24','Jun24','Jul24','Aug24','Sep24','Oct24','Nov24'];
-  buildBarChart('cashFlowChart','cashFlowLabels',[5.1,4.6,4.0,5.4,5.2,4.8,5.0,4.5,5.3,5.6,4.2,4.8,5.8,5.4,5.6,5.0,5.8,5.8,5.3,5.7,6.0,5.9,6.2],months);
+  buildBarChart('cashFlowChart','cashFlowLabels',[5.1,4.6,4.0,5.4,5.2,4.8,5.0,4.5,5.3,5.6,4.2,4.8,5.8,5.4,5.6,5.0,5.8,5.8,5.3,5.7,6.0,5.9,6.2], months);
 </script>
 </body>
 </html>
