@@ -3,7 +3,13 @@
    Password-based auth · Full API integration · Auth guard
    ============================================================ */
 
-const API = 'https://soullink-backendv2.onrender.com/api';
+const API      = 'https://soullink-backendv2.onrender.com/api';
+const AUTH     = `${API}/auth`;         // POST /api/auth/login, /api/auth/signup
+const INVEST   = `${API}/investments`;  // POST /api/investments
+const WITHDRAW = `${API}/withdrawals`;  // POST /api/withdrawals
+const PORTFOLIO= `${API}/portfolio`;    // GET  /api/portfolio/:userId
+const PAYOUTS  = `${API}/payouts`;      // GET  /api/payouts/:userId
+const USERS    = `${API}/users`;        // GET  /api/users/:userId/transactions
 
 // ---- TICKER ----
 const tickerData = [
@@ -169,7 +175,7 @@ async function verifyLogin() {
   if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
 
   try {
-    const res  = await fetch(`${API}/login`, {
+    const res  = await fetch(`${AUTH}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier, password })
@@ -241,7 +247,7 @@ async function submitSignup() {
   if (btn) { btn.disabled = true; btn.textContent = 'Creating account…'; }
 
   try {
-    const res  = await fetch(`${API}/signup`, {
+    const res  = await fetch(`${AUTH}/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -303,7 +309,7 @@ async function submitInvest() {
   if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
 
   try {
-    const res  = await fetch(`${API}/invest`, {
+    const res  = await fetch(`${INVEST}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -357,7 +363,7 @@ async function submitWithdraw() {
   if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
 
   try {
-    const res  = await fetch(`${API}/withdraw`, {
+    const res  = await fetch(`${WITHDRAW}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -392,7 +398,7 @@ async function submitWithdraw() {
   if (!userId) return;
 
   // ---- Holdings ----
-  fetch(`${API}/user/investments/${userId}`)
+  fetch(`${PORTFOLIO}/${userId}`)
     .then(r => r.json())
     .then(data => {
       const tbody = document.querySelector('#tab-holdings tbody');
@@ -436,7 +442,7 @@ async function submitWithdraw() {
     .catch(err => console.error('Investments fetch error:', err));
 
   // ---- Payouts ----
-  fetch(`${API}/user/payouts/${userId}`)
+  fetch(`${PAYOUTS}/${userId}`)
     .then(r => r.json())
     .then(data => {
       const tbody = document.querySelector('#tab-payouts tbody');
@@ -454,7 +460,7 @@ async function submitWithdraw() {
     .catch(err => console.error('Payouts fetch error:', err));
 
   // ---- Transactions ----
-  fetch(`${API}/user/transactions/${userId}`)
+  fetch(`${USERS}/${userId}/transactions`)
     .then(r => r.json())
     .then(data => {
       const tbody = document.querySelector('#tab-transactions tbody');
