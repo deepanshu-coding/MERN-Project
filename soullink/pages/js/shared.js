@@ -44,6 +44,45 @@ function isLoggedIn()  { return sessionStorage.getItem('slc_auth') === 'true'; }
 function getUser()     { return sessionStorage.getItem('slc_user')   || 'Investor'; }
 function getUserId()   { return sessionStorage.getItem('slc_userId') || ''; }
 function getToken()    { return sessionStorage.getItem('slc_token')  || ''; }
+function getRefresh()  { return sessionStorage.getItem('slc_refresh') || ''; }
+
+// Silently refresh the access token using the stored refresh token.
+// Returns the new access token string, or '' if refresh fails.
+async function refreshAccessToken() {
+  const refresh = getRefresh();
+  if (!refresh) return '';
+  try {
+    const res  = await fetch(`${AUTH}/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: refresh }),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      const newToken   = data.data?.accessToken || '';
+      const newRefresh = data.data?.refreshToken || '';
+      if (newToken) sessionStorage.setItem('slc_token',   newToken);
+      if (newRefresh) sessionStorage.setItem('slc_refresh', newRefresh);
+      return newToken;
+    }
+  } catch (_) {}
+  return '';
+}
+
+// Fetch wrapper that auto-refreshes on 401 and retries once.
+async function authFetch(url, options = {}) {
+  let token = getToken();
+  options.headers = { ...(options.headers || {}), 'Authorization': `Bearer ${token}` };
+  let res = await fetch(url, options);
+  if (res.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      options.headers['Authorization'] = `Bearer ${newToken}`;
+      res = await fetch(url, options);
+    }
+  }
+  return res;
+}
 
 function setLoggedIn(name, userId, token) {
   sessionStorage.setItem('slc_auth',   'true');
@@ -185,11 +224,15 @@ async function verifyLogin() {
     const data = await res.json();
 
     if (res.ok && data.success) {
-      const name   = data.user?.fullName || data.user?.name || 'Investor';
-      const userId = data.user?._id      || data.user?.id   || '';
-      // Extract token from all common response field names
-      const token = data.token || data.accessToken || data.access_token || '';
+      // Backend returns: { success, data: { accessToken, refreshToken, user } }
+      const payload = data.data || data;
+      const userObj = payload.user || {};
+      const name    = userObj.fullName || userObj.name || 'Investor';
+      const userId  = userObj._id || userObj.id || '';
+      const token   = payload.accessToken || payload.token || payload.access_token || '';
+      const refresh = payload.refreshToken || '';
       setLoggedIn(name, userId, token);
+      if (refresh) sessionStorage.setItem('slc_refresh', refresh);
       toast('Welcome back, ' + name + '!', 'success');
       setTimeout(() => {
         const redir = sessionStorage.getItem('slc_redirect');
@@ -333,12 +376,9 @@ async function submitInvest() {
   if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
 
   try {
-    const res  = await fetch(`${INVEST}`, {
+    const res  = await authFetch(`${INVEST}`, {
       method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         amount:        parseFloat(amount),
         fundName:      'SoulLink Growth Fund',
@@ -350,8 +390,8 @@ async function submitInvest() {
     if (res.ok && data.success) {
       toast('Investment request submitted! Verification within 24 hours.', 'success');
     } else if (res.status === 401) {
-      toast('Session expired. Please sign in again.', 'error');
-      setTimeout(() => { sessionStorage.setItem('slc_redirect', location.href); location.href = 'login.html'; }, 1200);
+      toast('Session expired — please sign in again.', 'error');
+      setTimeout(() => { sessionStorage.clear(); location.href = 'login.html'; }, 1500);
     } else {
       toast(data.message || data.error || 'Submission failed. Try again.', 'error');
     }
@@ -393,12 +433,9 @@ async function submitWithdraw() {
   if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
 
   try {
-    const res  = await fetch(`${WITHDRAW}`, {
+    const res  = await authFetch(`${WITHDRAW}`, {
       method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         amount:       parseFloat(amount),
         withdrawType: 'earnings',
@@ -409,8 +446,8 @@ async function submitWithdraw() {
     if (res.ok && data.success) {
       toast('Withdrawal request submitted. Processing within 3–5 business days.', 'success');
     } else if (res.status === 401) {
-      toast('Session expired. Please sign in again.', 'error');
-      setTimeout(() => { sessionStorage.setItem('slc_redirect', location.href); location.href = 'login.html'; }, 1200);
+      toast('Session expired — please sign in again.', 'error');
+      setTimeout(() => { sessionStorage.clear(); location.href = 'login.html'; }, 1500);
     } else {
       toast(data.message || data.error || 'Request failed. Try again.', 'error');
     }
@@ -442,11 +479,8 @@ async function submitWithdraw() {
 
   const fmt = n => '₹' + Number(n || 0).toLocaleString('en-IN');
 
-  fetch(`${PORTFOLIO}`, {
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+  authFetch(`${PORTFOLIO}`, {
+    headers: { 'Content-Type': 'application/json' },
   })
   .then(async r => {
     // If response is not JSON (e.g. HTML error page), handle gracefully
