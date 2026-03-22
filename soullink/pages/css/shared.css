@@ -547,7 +547,16 @@ select.form-input {
   backdrop-filter: var(--blur);
   box-shadow: var(--shadow-s), inset 0 1px 0 rgba(255,255,255,0.85);
 }
-.ps-val { font-size: 24px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+.ps-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  /* shrink font on small cards so large rupee values never overflow */
+  font-size: clamp(15px, 2.2vw, 24px);
+}
 .ps-lbl { font-size: 10.5px; color: var(--text4); margin-top: 5px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
 
 /* ---- TABS ---- */
