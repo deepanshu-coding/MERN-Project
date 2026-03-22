@@ -38,16 +38,18 @@ const tickerData = [
 // ============================================================
 // AUTH HELPERS
 // ============================================================
-const PROTECTED_PAGES = ['portfolio', 'withdraw'];
+const PROTECTED_PAGES = ['portfolio', 'withdraw', 'invest'];
 
 function isLoggedIn()  { return sessionStorage.getItem('slc_auth') === 'true'; }
 function getUser()     { return sessionStorage.getItem('slc_user')   || 'Investor'; }
 function getUserId()   { return sessionStorage.getItem('slc_userId') || ''; }
+function getToken()    { return sessionStorage.getItem('slc_token')  || ''; }
 
-function setLoggedIn(name, userId) {
+function setLoggedIn(name, userId, token) {
   sessionStorage.setItem('slc_auth',   'true');
   sessionStorage.setItem('slc_user',   name   || 'Investor');
   sessionStorage.setItem('slc_userId', userId || '');
+  if (token) sessionStorage.setItem('slc_token', token);
 }
 
 function logout() {
@@ -185,8 +187,9 @@ async function verifyLogin() {
     if (res.ok && data.success) {
       const name   = data.user?.fullName || data.user?.name || 'Investor';
       const userId = data.user?._id      || data.user?.id   || '';
-      setLoggedIn(name, userId);
-      if (data.token) sessionStorage.setItem('slc_token', data.token);
+      // Extract token from all common response field names
+      const token = data.token || data.accessToken || data.access_token || '';
+      setLoggedIn(name, userId, token);
       toast('Welcome back, ' + name + '!', 'success');
       setTimeout(() => {
         const redir = sessionStorage.getItem('slc_redirect');
@@ -309,12 +312,13 @@ async function submitInvest() {
     document.querySelector('input[placeholder="Enter UTR / Transaction ID"]')?.value?.trim() ||
     document.querySelector('input[placeholder="Enter reference number"]')?.value?.trim() || '';
 
-  const token = sessionStorage.getItem('slc_token');
-  if (!token) {
-    toast('Please sign in before submitting an investment', 'error');
+  // Auth guard: invest is a protected page, but double-check here too
+  if (!isLoggedIn()) {
+    toast('Please sign in to invest', 'error');
     setTimeout(() => { sessionStorage.setItem('slc_redirect', location.href); location.href = 'login.html'; }, 1200);
     return;
   }
+  const token = getToken();
   if (!paymentMode) {
     toast('Please select a payment mode', 'error'); return;
   }
@@ -372,12 +376,12 @@ async function submitWithdraw() {
   const purposeSel  = document.getElementById('withdrawPurpose');
   const remarks     = purposeSel?.value || '';
 
-  const token = sessionStorage.getItem('slc_token');
-  if (!token) {
-    toast('Please sign in before submitting a withdrawal', 'error');
+  if (!isLoggedIn()) {
+    toast('Please sign in to withdraw', 'error');
     setTimeout(() => { sessionStorage.setItem('slc_redirect', location.href); location.href = 'login.html'; }, 1200);
     return;
   }
+  const token = getToken();
   if (!amount) {
     toast('Please enter the withdrawal amount', 'error'); return;
   }
@@ -427,13 +431,12 @@ async function submitWithdraw() {
   const page = location.pathname.split('/').pop().replace('.html', '');
   if (page !== 'portfolio') return;
 
-  const token = sessionStorage.getItem('slc_token');
+  const token = getToken();
 
-  if (!token) {
-    document.getElementById('holdings-tbody').innerHTML =
-      `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--red);">
-        Session expired. <a href="login.html" style="color:var(--ms-blue)">Please sign in again.</a>
-      </td></tr>`;
+  if (!isLoggedIn() || !token) {
+    // Not logged in or token missing — redirect to login
+    sessionStorage.setItem('slc_redirect', location.href);
+    location.href = 'login.html';
     return;
   }
 
