@@ -408,134 +408,138 @@ async function submitWithdraw() {
 }
 
 // ============================================================
-// PORTFOLIO PAGE — fetch all data from API with auth token
+// PORTFOLIO PAGE — single API call returns all data
+// GET /api/portfolio  (token-based, no userId in URL)
+// Returns: { data: { summary, investments, payouts, withdrawals, transactions } }
 // ============================================================
 (function loadPortfolioData() {
   const page = location.pathname.split('/').pop().replace('.html', '');
   if (page !== 'portfolio') return;
 
-  const userId = getUserId();
-  const token  = sessionStorage.getItem('slc_token');
+  const token = sessionStorage.getItem('slc_token');
 
-  if (!userId || !token) {
-    // Not logged in — auth guard will redirect, but just in case
+  if (!token) {
     document.getElementById('holdings-tbody').innerHTML =
-      `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--red);">Session expired. Please sign in again.</td></tr>`;
+      `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--red);">
+        Session expired. <a href="login.html" style="color:var(--ms-blue)">Please sign in again.</a>
+      </td></tr>`;
     return;
   }
 
-  const authHeaders = {
-    'Content-Type':  'application/json',
-    'Authorization': `Bearer ${token}`,
-  };
+  const fmt = n => '₹' + Number(n || 0).toLocaleString('en-IN');
 
-  const fmt = n => '₹' + Number(n).toLocaleString('en-IN');
+  fetch(`${PORTFOLIO}`, {
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  })
+  .then(async r => {
+    // If response is not JSON (e.g. HTML error page), handle gracefully
+    const contentType = r.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(`Server returned non-JSON response (${r.status})`);
+    }
+    return r.json();
+  })
+  .then(data => {
+    if (!data.success) {
+      const msg = data.message || 'Failed to load portfolio.';
+      ['holdings-tbody','payouts-tbody','transactions-tbody'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--red);">${msg}</td></tr>`;
+      });
+      return;
+    }
 
-  // ---- Holdings ----
-  fetch(`${PORTFOLIO}/${userId}`, { headers: authHeaders })
-    .then(r => r.json())
-    .then(data => {
-      const tbody = document.getElementById('holdings-tbody');
+    const { summary, investments = [], payouts = [], transactions = [], withdrawals = [] } = data.data;
 
-      // Handle auth error
-      if (data.success === false) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--red);">${data.message || 'Failed to load investments.'}</td></tr>`;
-        return;
-      }
+    // ── Summary stats ────────────────────────────────────
+    document.getElementById('stat-invested').textContent = fmt(summary?.totalInvested);
+    document.getElementById('stat-current').textContent  = fmt(summary?.currentValue);
+    document.getElementById('stat-earnings').textContent = (summary?.totalEarnings >= 0 ? '+' : '') + fmt(summary?.totalEarnings);
+    document.getElementById('stat-roi').textContent      = (summary?.roi || '0.00') + '%';
 
-      const investments = data.investments || data.data || [];
-
-      if (!investments.length) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text4);">No investments found. <a href="invest.html" style="color:var(--ms-blue)">Make your first investment →</a></td></tr>`;
-        // Zero out stats
-        document.getElementById('stat-invested').textContent = '₹0';
-        document.getElementById('stat-current').textContent  = '₹0';
-        document.getElementById('stat-earnings').textContent = '₹0';
-        document.getElementById('stat-roi').textContent      = '0%';
-        return;
-      }
-
-      // Calculate summary stats
-      const totalInvested = investments.reduce((s, i) => s + Number(i.amount || 0), 0);
-      const totalCurrent  = investments.reduce((s, i) => s + Number(i.currentValue || i.amount || 0), 0);
-      const totalEarnings = totalCurrent - totalInvested;
-      const roi           = totalInvested ? ((totalEarnings / totalInvested) * 100).toFixed(2) : '0.00';
-
-      document.getElementById('stat-invested').textContent = fmt(totalInvested);
-      document.getElementById('stat-current').textContent  = fmt(totalCurrent);
-      document.getElementById('stat-earnings').textContent = (totalEarnings >= 0 ? '+' : '') + fmt(totalEarnings);
-      document.getElementById('stat-roi').textContent      = roi + '%';
-
-      tbody.innerHTML = investments.map(inv => `
+    // ── Holdings tab ──────────────────────────────────────
+    const holdingsTbody = document.getElementById('holdings-tbody');
+    if (!investments.length) {
+      holdingsTbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text4);">
+        No investments yet. <a href="invest.html" style="color:var(--ms-blue)">Make your first investment →</a>
+      </td></tr>`;
+    } else {
+      holdingsTbody.innerHTML = investments.map(inv => `
         <tr>
-          <td><strong>${inv.fund || inv.fundName || 'SoulLink Fund'}</strong></td>
-          <td style="font-size:11px;color:var(--text4)">${inv.date || inv.investedOn || inv.createdAt?.slice(0,10) || '—'}</td>
+          <td><strong>${inv.fundName || inv.fund || 'SoulLink Fund'}</strong></td>
+          <td style="font-size:11px;color:var(--text4)">${inv.investedAt ? new Date(inv.investedAt).toLocaleDateString('en-IN') : '—'}</td>
           <td>${fmt(inv.amount)}</td>
-          <td><span class="badge badge-blue">8% p.m.</span></td>
+          <td><span class="badge badge-blue">${inv.returnRate || 8}% p.m.</span></td>
           <td style="color:var(--green);font-weight:600">${fmt(inv.currentValue || inv.amount)}</td>
-          <td style="color:var(--green)">${'+' + fmt((inv.currentValue || inv.amount) - inv.amount)}</td>
+          <td style="color:var(--green)">+${fmt((inv.currentValue || inv.amount) - inv.amount)}</td>
           <td><span class="badge badge-green">${inv.status || 'Active'}</span></td>
         </tr>`).join('');
-    })
-    .catch(err => {
-      console.error('Holdings fetch error:', err);
-      document.getElementById('holdings-tbody').innerHTML =
-        `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--red);">Could not load investments. Check your connection.</td></tr>`;
-    });
+    }
 
-  // ---- Payouts ----
-  fetch(`${PAYOUTS}/${userId}`, { headers: authHeaders })
-    .then(r => r.json())
-    .then(data => {
-      const tbody = document.getElementById('payouts-tbody');
-      const payouts = data.payouts || data.data || [];
-
-      if (!payouts.length) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text4);">No payouts yet.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = payouts.map(p => `
+    // ── Payouts tab ───────────────────────────────────────
+    const payoutsTbody = document.getElementById('payouts-tbody');
+    if (!payouts.length) {
+      payoutsTbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text4);">No payouts yet.</td></tr>`;
+    } else {
+      payoutsTbody.innerHTML = payouts.map(p => `
         <tr>
           <td>${p.month || '—'}</td>
-          <td>${p.fund || p.fundName || '—'}</td>
+          <td>${p.investment?.fundName || p.fundName || '—'}</td>
           <td>${fmt(p.amount)}</td>
-          <td>${p.rate || '8%'}</td>
-          <td style="font-size:11px;color:var(--text4)">${p.date || p.paidOn || '—'}</td>
-          <td><span class="badge ${p.status === 'Paid' ? 'badge-green' : 'badge-blue'}">${p.status || 'Pending'}</span></td>
+          <td>${p.rate || '8'}%</td>
+          <td style="font-size:11px;color:var(--text4)">${p.paidAt ? new Date(p.paidAt).toLocaleDateString('en-IN') : '—'}</td>
+          <td><span class="badge ${p.status === 'paid' ? 'badge-green' : 'badge-blue'}">${p.status || 'Pending'}</span></td>
         </tr>`).join('');
-    })
-    .catch(err => {
-      console.error('Payouts fetch error:', err);
-      document.getElementById('payouts-tbody').innerHTML =
-        `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--red);">Could not load payouts.</td></tr>`;
-    });
+    }
 
-  // ---- Transactions ----
-  fetch(`${USERS}/${userId}/transactions`, { headers: authHeaders })
-    .then(r => r.json())
-    .then(data => {
-      const tbody = document.getElementById('transactions-tbody');
-      const transactions = data.transactions || data.data || [];
+    // ── Transactions tab (investments + withdrawals merged) ──
+    const txTbody = document.getElementById('transactions-tbody');
 
-      if (!transactions.length) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text4);">No transactions yet.</td></tr>`;
-        return;
-      }
+    // Combine deposits (investments) and withdrawals into one list
+    const deposits = investments.map(inv => ({
+      type:      'DEPOSIT',
+      amount:    inv.amount,
+      method:    inv.paymentMode || 'Bank Transfer',
+      reference: inv.transactionId || inv.utrNumber || '—',
+      date:      inv.investedAt,
+      status:    inv.status === 'active' ? 'Confirmed' : inv.status,
+    }));
+    const wds = withdrawals.map(w => ({
+      type:      'WITHDRAW',
+      amount:    w.amount,
+      method:    'Bank Transfer',
+      reference: w.utrNumber || '—',
+      date:      w.requestedAt,
+      status:    w.status || 'Processing',
+    }));
 
-      tbody.innerHTML = transactions.map(t => `
+    const allTx = [...deposits, ...wds].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (!allTx.length) {
+      txTbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text4);">No transactions yet.</td></tr>`;
+    } else {
+      txTbody.innerHTML = allTx.map(t => `
         <tr>
-          <td><span class="badge ${t.type === 'DEPOSIT' ? 'badge-green' : 'badge-red'}">${t.type || '—'}</span></td>
+          <td><span class="badge ${t.type === 'DEPOSIT' ? 'badge-green' : 'badge-red'}">${t.type}</span></td>
           <td>${fmt(t.amount)}</td>
           <td>${t.method || '—'}</td>
-          <td style="font-size:11px;color:var(--text4)">${t.reference || t.transactionId || '—'}</td>
-          <td style="font-size:11px;color:var(--text4)">${t.date || t.createdAt?.slice(0,10) || '—'}</td>
+          <td style="font-size:11px;color:var(--text4)">${t.reference || '—'}</td>
+          <td style="font-size:11px;color:var(--text4)">${t.date ? new Date(t.date).toLocaleDateString('en-IN') : '—'}</td>
           <td><span class="badge badge-green">${t.status || 'Confirmed'}</span></td>
         </tr>`).join('');
-    })
-    .catch(err => {
-      console.error('Transactions fetch error:', err);
-      document.getElementById('transactions-tbody').innerHTML =
-        `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--red);">Could not load transactions.</td></tr>`;
+    }
+  })
+  .catch(err => {
+    console.error('Portfolio fetch error:', err);
+    ['holdings-tbody','payouts-tbody','transactions-tbody'].forEach(id => {
+      const el = document.getElementById(id);
+      const cols = id === 'holdings-tbody' ? 7 : 6;
+      if (el) el.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:32px;color:var(--red);">
+        Could not load data: ${err.message}
+      </td></tr>`;
     });
+  });
 })();
