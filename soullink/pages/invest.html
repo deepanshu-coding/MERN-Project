@@ -1,0 +1,109 @@
+<!-- invest.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invest — SoulLink Co.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/shared.css">
+  <link rel="icon" type="image/png" href="../assets/brand_logo.png">
+</head>
+<body>
+<div class="ticker-wrap">
+  <div class="ticker-label">Live Markets</div>
+  <div style="overflow:hidden;flex:1"><div class="ticker-track" id="tickerTrack"></div></div>
+</div>
+<nav>
+  <div class="nav-logo" onclick="location.href='index.html'"><img src="../assets/brand_logo.png" alt="SoulLink Co." style="height:32px;width:auto;"></div>
+  <div class="nav-links" id="navLinks">
+    <a class="nav-link" href="index.html">Home</a><a class="nav-link" href="invest.html">Invest</a>
+    <a class="nav-link" href="portfolio.html">Portfolio</a><a class="nav-link" href="withdraw.html">Withdraw</a>
+    <a class="nav-link" href="financials.html">Financials</a><a class="nav-link" href="about.html">About Us</a>
+    <a class="nav-link" href="team.html">Our Team</a><a class="nav-link" href="services.html">Services</a>
+    <a class="nav-link" href="privacy.html">Privacy</a><a class="nav-link" href="terms.html">Terms</a>
+  </div>
+  <button class="hamburger" id="hamburger" onclick="toggleNav()"><span></span><span></span><span></span></button>
+  <div class="nav-actions"></div>
+</nav>
+
+<div class="section">
+  <div class="glow-bar"></div>
+  <p class="section-eyebrow">Grow Your Wealth</p>
+  <h2 class="section-title">Invest in SoulLink Co.</h2>
+  <p class="section-sub">Earn a target of <strong style="color:var(--ms-blue);">8% per month*</strong> managed by our quant algorithms. Minimum investment: ₹10,000.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:940px;">
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ms-blue);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">Investor Details</div>
+      <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" type="text" placeholder="As per Aadhaar"></div>
+      <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" type="email" placeholder="you@example.com"></div>
+      <div class="form-group"><label class="form-label">Aadhaar Number</label><input class="form-input" type="text" placeholder="XXXX XXXX XXXX"></div>
+      <div class="form-group"><label class="form-label">PAN Card Number</label><input class="form-input" type="text" placeholder="ABCDE1234F"></div>
+      <div class="form-group"><label class="form-label">Investment Amount (₹)</label><input class="form-input" type="number" placeholder="Minimum ₹10,000" min="10000"></div>
+      <div class="form-group"><label class="form-label">Bank Account (for withdrawal)</label><input class="form-input" type="text" placeholder="Account Number"></div>
+      <div class="form-group"><label class="form-label">IFSC Code</label><input class="form-input" type="text" placeholder="e.g. BARB0PIYRE"></div>
+      <div class="form-group">
+        <label class="form-label">Payment Mode</label>
+        <select class="form-input" id="payMode" onchange="showPayDetails()">
+          <option value="">— Select Payment Mode —</option>
+          <option value="upi">UPI</option>
+          <option value="bank">Bank Transfer</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <div id="payDetailsUPI" style="display:none;">
+        <div style="font-size:12px;font-weight:700;color:var(--ms-blue);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">Pay via UPI</div>
+        <div class="pay-box">
+          <div class="pkey">UPI ID</div>
+          <div class="pval" style="font-size:19px;letter-spacing:0.05em;">8174923591@slc</div>
+          <div style="margin-top:16px;background:var(--bg);border-radius:6px;padding:20px;text-align:center;border:1px solid var(--border);">
+            <img src="../assets/qr-code.jpeg" alt="QR Code" style="width:140px;height:140px;display:block;margin:auto;">
+            <div style="font-size:11px;color:var(--text4);margin-top:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">SCAN · AND · PAY</div>
+          </div>
+        </div>
+        <div class="notice" style="margin-top:14px;">After payment, enter your transaction ID below.</div>
+        <div class="form-group"><label class="form-label">UPI Transaction ID / UTR</label><input class="form-input" type="text" placeholder="Enter UTR / Transaction ID"></div>
+      </div>
+
+      <div id="payDetailsBank" style="display:none;">
+        <div style="font-size:12px;font-weight:700;color:var(--ms-blue);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">Bank Transfer Details</div>
+        <div class="pay-box">
+          <div style="display:grid;gap:14px;">
+            <div><div class="pkey">Bank Name</div><div class="pval">Bank of Baroda</div></div>
+            <div><div class="pkey">Account Number</div><div class="pval">47578100003864</div></div>
+            <div><div class="pkey">IFSC Code</div><div class="pval">BARB0PIYRE</div></div>
+            <div><div class="pkey">Account Holder</div><div class="pval">SoulLink Co.</div></div>
+          </div>
+          <div class="notice" style="margin-top:14px;">Use your Name & PAN as payment reference.</div>
+        </div>
+        <div class="form-group" style="margin-top:12px;"><label class="form-label">Transfer Reference / UTR</label><input class="form-input" type="text" placeholder="Enter reference number"></div>
+      </div>
+
+      <div id="payPlaceholder" style="text-align:center;padding:60px 20px;color:var(--text4);">
+        <div style="margin-bottom:12px;opacity:0.4;display:flex;justify-content:center;">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--text4)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+        <div style="font-size:13px;">Select a payment mode to continue</div>
+      </div>
+
+      <button class="submit-btn submit-btn-gold" id="investSubmit" style="margin-top:16px;" onclick="submitInvest()">Submit Investment Request</button>
+      <p class="disc" style="margin-top:10px;">* 8% p.m. is a target return, not guaranteed. Subject to market conditions.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-links">
+    <a href="index.html">Home</a><a href="about.html">About</a><a href="team.html">Team</a>
+    <a href="services.html">Services</a><a href="financials.html">Financials</a>
+    <a href="privacy.html">Privacy</a><a href="terms.html">Terms</a>
+  </div>
+  <div style="font-size:11px;margin-bottom:6px;">© 2024 SoulLink Co. Pvt. Ltd. · Kanpur, Uttar Pradesh · soullinkco.pvt.ltd@gmail.com</div>
+  <div class="disc">* Investment returns are targets and not guaranteed. Investing involves risk.</div>
+</footer>
+<div id="toast"></div>
+<script src="../js/shared.js"></script>
+</body>
+</html>

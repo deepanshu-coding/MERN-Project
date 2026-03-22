@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — SoulLink Co.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/shared.css">
+  <link rel="icon" type="image/png" href="../assets/brand_logo.png">
+</head>
+<body>
+
+<div class="ticker-wrap">
+  <div class="ticker-label">Live Markets</div>
+  <div style="overflow:hidden;flex:1"><div class="ticker-track" id="tickerTrack"></div></div>
+</div>
+
+<nav>
+  <div class="nav-logo" onclick="location.href='index.html'">
+    <img src="../assets/brand_logo.png" alt="SoulLink Co." style="height:32px;width:auto;">
+  </div>
+  <div class="nav-links" id="navLinks">
+    <a class="nav-link" href="index.html">Home</a>
+    <a class="nav-link" href="invest.html">Invest</a>
+    <a class="nav-link" href="portfolio.html">Portfolio</a>
+    <a class="nav-link" href="withdraw.html">Withdraw</a>
+    <a class="nav-link" href="financials.html">Financials</a>
+    <a class="nav-link" href="about.html">About Us</a>
+    <a class="nav-link" href="team.html">Our Team</a>
+    <a class="nav-link" href="services.html">Services</a>
+    <a class="nav-link" href="privacy.html">Privacy</a>
+    <a class="nav-link" href="terms.html">Terms</a>
+  </div>
+  <button class="hamburger" id="hamburger" onclick="toggleNav()"><span></span><span></span><span></span></button>
+  <div class="nav-actions"></div>
+</nav>
+
+<div class="auth-wrap">
+  <div class="auth-box fade-up">
+    <div style="text-align:center;margin-bottom:28px;">
+      <img src="../assets/brand_logo.png" alt="SoulLink Co." style="height:52px;width:auto;display:block;margin:0 auto 14px;">
+      <div class="auth-title">Sign in to SoulLink</div>
+      <div class="auth-sub">Use your Aadhaar number or User ID</div>
+    </div>
+
+    <!-- Auth redirect notice -->
+    <div id="authNotice" style="display:none;background:rgba(0,103,184,0.07);border:1px solid rgba(0,103,184,0.2);border-radius:6px;padding:10px 14px;margin-bottom:20px;font-size:12.5px;color:var(--ms-blue);text-align:center;">
+      🔒 Please sign in to access that page
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Aadhaar Number or User ID</label>
+      <input class="form-input" type="text" id="loginIdentifier" placeholder="XXXX XXXX XXXX or SLC-XXXXXX"
+        onkeydown="if(event.key==='Enter')document.getElementById('loginPassword').focus()">
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;justify-content:space-between;">
+        Password
+        <a href="#" style="font-size:12px;color:var(--ms-blue);font-weight:400;">Forgot password?</a>
+      </label>
+      <div style="position:relative;">
+        <input class="form-input" type="password" id="loginPassword" placeholder="Your account password"
+          onkeydown="if(event.key==='Enter')verifyLogin()" style="padding-right:42px;">
+        <button onclick="togglePwd('loginPassword',this)"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text4);font-size:13px;">
+          Show
+        </button>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="loginBtn" onclick="verifyLogin()">Sign in</button>
+
+    <hr class="divider" style="margin:20px 0;">
+    <div style="text-align:center;font-size:13px;color:var(--text3);">
+      New to SoulLink? <a href="signup.html" style="color:var(--ms-blue);font-weight:600;">Create an account →</a>
+    </div>
+
+    <!-- MS-style info box -->
+    <div style="margin-top:20px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;font-size:12px;color:var(--text3);">
+      <strong style="color:var(--text2);">New investors:</strong> Create an account first, then sign in using your Aadhaar or the User ID assigned to you.
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-links">
+    <a href="index.html">Home</a><a href="about.html">About</a><a href="team.html">Team</a>
+    <a href="services.html">Services</a><a href="financials.html">Financials</a>
+    <a href="privacy.html">Privacy</a><a href="terms.html">Terms</a>
+  </div>
+  <div style="font-size:11px;margin-bottom:6px;">© 2024 SoulLink Co. Pvt. Ltd. · Kanpur, Uttar Pradesh</div>
+  <div class="disc">* Investment returns are targets and not guaranteed. Investing involves risk.</div>
+</footer>
+
+<div id="toast"></div>
+<script src="../js/shared.js"></script>
+<script>
+  if (sessionStorage.getItem('slc_redirect')) {
+    document.getElementById('authNotice').style.display = 'block';
+  }
+  function togglePwd(id, btn) {
+    const inp = document.getElementById(id);
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    btn.textContent = inp.type === 'password' ? 'Show' : 'Hide';
+  }
+</script>
+</body>
+</html>
