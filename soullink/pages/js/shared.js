@@ -392,6 +392,15 @@ async function submitInvest() {
     } else if (res.status === 401) {
       toast('Session expired — please sign in again.', 'error');
       setTimeout(() => { sessionStorage.clear(); location.href = 'login.html'; }, 1500);
+    } else if (res.status === 403) {
+      // KYC not approved yet
+      const kycStatus = data.kycStatus || 'pending';
+      const kycLabels = {
+        'pending':      'Your KYC is pending review. Our team will verify your documents within 24–48 hours.',
+        'under_review': 'Your KYC is currently under review. You will be notified once approved.',
+        'rejected':     'Your KYC was rejected. Please contact support at soullinkco.pvt.ltd@gmail.com.',
+      };
+      toast(kycLabels[kycStatus] || 'KYC approval required before investing. Please contact support.', 'error');
     } else {
       toast(data.message || data.error || 'Submission failed. Try again.', 'error');
     }
@@ -477,7 +486,16 @@ async function submitWithdraw() {
     return;
   }
 
-  const fmt = n => '₹' + Number(n || 0).toLocaleString('en-IN');
+  const fmt = n => {
+    const num = Number(n || 0);
+    // Use en-IN for Indian comma grouping (1,00,000 style)
+    // minimumFractionDigits:0 avoids ".00" on whole numbers
+    // maximumFractionDigits:2 keeps paise when present
+    return '₹' + num.toLocaleString('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+  };
 
   authFetch(`${PORTFOLIO}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -501,6 +519,23 @@ async function submitWithdraw() {
     }
 
     const { summary, investments = [], payouts = [], transactions = [], withdrawals = [] } = data.data;
+
+    // ── KYC status banner ────────────────────────────────
+    const kycBanner = document.getElementById('kyc-banner');
+    if (kycBanner) {
+      const ks = data.data?.kycStatus || summary?.kycStatus || '';
+      if (ks && ks !== 'approved') {
+        const kycMsgs = {
+          'pending':      '⏳ KYC Pending — Your documents are queued for verification (24–48 hrs). You cannot invest until approved.',
+          'under_review': '🔍 KYC Under Review — Our team is verifying your documents. You will be notified by email once approved.',
+          'rejected':     '❌ KYC Rejected — Please contact support at soullinkco.pvt.ltd@gmail.com to resolve your KYC.',
+        };
+        kycBanner.textContent = kycMsgs[ks] || 'KYC verification required before investing.';
+        kycBanner.style.display = 'block';
+      } else if (ks === 'approved') {
+        kycBanner.style.display = 'none';
+      }
+    }
 
     // ── Summary stats ────────────────────────────────────
     document.getElementById('stat-invested').textContent = fmt(summary?.totalInvested);
