@@ -155,9 +155,9 @@ function showPayDetails() {
 }
 
 // ============================================================
-// LOGIN  →  POST /api/login
-// Accepts: { identifier (aadhaar or userId), password }
-// Returns: { success, name, userId }
+// LOGIN  →  POST /api/auth/login
+// Accepts: { identifier (aadhaarNumber or userId), password }
+// Returns: { success, token, user: { fullName, _id } }
 // ============================================================
 async function verifyLogin() {
   const identifierEl = document.getElementById('loginIdentifier');
@@ -183,15 +183,18 @@ async function verifyLogin() {
     const data = await res.json();
 
     if (res.ok && data.success) {
-      setLoggedIn(data.name, data.userId);
-      toast('Welcome back, ' + (data.name || 'Investor') + '!', 'success');
+      const name   = data.user?.fullName || data.user?.name || 'Investor';
+      const userId = data.user?._id      || data.user?.id   || '';
+      setLoggedIn(name, userId);
+      if (data.token) sessionStorage.setItem('slc_token', data.token);
+      toast('Welcome back, ' + name + '!', 'success');
       setTimeout(() => {
         const redir = sessionStorage.getItem('slc_redirect');
         sessionStorage.removeItem('slc_redirect');
         location.href = redir || 'portfolio.html';
       }, 900);
     } else {
-      toast(data.error || 'Invalid credentials. Please try again.', 'error');
+      toast(data.message || data.error || 'Invalid credentials. Please try again.', 'error');
       if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
     }
   } catch (err) {
@@ -202,39 +205,43 @@ async function verifyLogin() {
 }
 
 // ============================================================
-// SIGNUP  →  POST /api/signup
-// Accepts: { fullname, email, mobile, dob, aadhaar, pan,
-//            password, bank_name, account_number, ifsc, holder_name }
-// Returns: { success, userId }
+// SIGNUP  →  POST /api/auth/signup
+// Field names must match backend validator exactly:
+// fullName, email, mobile, dateOfBirth, aadhaarNumber, panNumber
+// bankDetails: { bankName, accountNumber, ifscCode, accountHolderName }
+// password (you need to add this to your authController)
 // ============================================================
 async function submitSignup() {
   const get = sel => document.querySelector(sel)?.value?.trim() || '';
 
-  const fullname       = get('input[placeholder="As per PAN Card"]');
-  const email          = get('input[placeholder="you@example.com"]');
-  const mobile         = get('input[placeholder="+91 XXXXX XXXXX"]');
-  const dob            = document.querySelector('input[type="date"]')?.value || '';
-  const aadhaar        = get('input[placeholder="XXXX XXXX XXXX"]').replace(/\s/g, '');
-  const pan            = get('input[placeholder="ABCDE1234F"]').toUpperCase();
-  const password       = document.getElementById('signupPassword')?.value || '';
-  const confirmPass    = document.getElementById('confirmPassword')?.value || '';
-  const bank_name      = get('input[placeholder="e.g. State Bank of India"]');
-  const account_number = get('input[placeholder="Account Number"]');
-  const ifsc           = get('input[placeholder="e.g. SBIN0001234"]').toUpperCase();
-  const holder_name    = get('input[placeholder="As per bank records"]');
+  const fullName          = get('input[placeholder="As per PAN Card"]');
+  const email             = get('input[placeholder="you@example.com"]');
+  const mobile            = get('input[placeholder="+91 XXXXX XXXXX"]').replace(/\s/g, '').replace('+91','');
+  const dateOfBirth       = document.querySelector('input[type="date"]')?.value || '';
+  const aadhaarNumber     = get('input[placeholder="XXXX XXXX XXXX"]').replace(/\s/g, '');
+  const panNumber         = get('input[placeholder="ABCDE1234F"]').toUpperCase();
+  const password          = document.getElementById('signupPassword')?.value || '';
+  const confirmPass       = document.getElementById('confirmPassword')?.value || '';
+  const bankName          = get('input[placeholder="e.g. State Bank of India"]');
+  const accountNumber     = get('input[placeholder="Account Number"]');
+  const ifscCode          = get('input[placeholder="e.g. SBIN0001234"]').toUpperCase();
+  const accountHolderName = get('input[placeholder="As per bank records"]');
 
   // Validation
-  if (!fullname || !email || !aadhaar || !pan || !password) {
+  if (!fullName || !email || !aadhaarNumber || !panNumber || !mobile) {
     toast('Please fill all required fields', 'error'); return;
   }
-  if (aadhaar.length !== 12) {
+  if (!/^\d{12}$/.test(aadhaarNumber)) {
     toast('Enter a valid 12-digit Aadhaar number', 'error'); return;
   }
-  if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+  if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) {
     toast('Enter a valid PAN number (e.g. ABCDE1234F)', 'error'); return;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     toast('Enter a valid email address', 'error'); return;
+  }
+  if (!/^[6-9]\d{9}$/.test(mobile)) {
+    toast('Enter a valid 10-digit Indian mobile number', 'error'); return;
   }
   if (password.length < 8) {
     toast('Password must be at least 8 characters', 'error'); return;
@@ -247,21 +254,36 @@ async function submitSignup() {
   if (btn) { btn.disabled = true; btn.textContent = 'Creating account…'; }
 
   try {
-    const res  = await fetch(`${AUTH}/signup`, {
+    const res = await fetch(`${AUTH}/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fullname, email, mobile, dob, aadhaar, pan, password,
-        bank_name, account_number, ifsc, holder_name
+        fullName,
+        email,
+        mobile,
+        dateOfBirth,
+        aadhaarNumber,
+        panNumber,
+        password,
+        bankDetails: {
+          bankName,
+          accountNumber,
+          ifscCode,
+          accountHolderName,
+        }
       })
     });
     const data = await res.json();
 
-    if (res.ok) {
-      toast('Account created! Your User ID: ' + (data.userId || ''), 'success');
-      setTimeout(() => location.href = 'login.html', 2500);
+    if (res.ok && data.success) {
+      toast('Account created successfully! Please sign in.', 'success');
+      setTimeout(() => location.href = 'login.html', 2000);
     } else {
-      toast(data.error || 'Sign-up failed. Please try again.', 'error');
+      // Show the exact validation error from backend if available
+      const msg = data.message || data.error
+        || (data.errors?.[0]?.msg)
+        || 'Sign-up failed. Please try again.';
+      toast(msg, 'error');
       if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
     }
   } catch (err) {
