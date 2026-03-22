@@ -408,94 +408,134 @@ async function submitWithdraw() {
 }
 
 // ============================================================
-// PORTFOLIO PAGE — load all three tabs from API
-// GET /api/user/investments/:userId   → holdings tab
-// GET /api/user/payouts/:userId       → payouts tab
-// GET /api/user/transactions/:userId  → transactions tab
+// PORTFOLIO PAGE — fetch all data from API with auth token
 // ============================================================
 (function loadPortfolioData() {
-  const page   = location.pathname.split('/').pop().replace('.html', '');
+  const page = location.pathname.split('/').pop().replace('.html', '');
   if (page !== 'portfolio') return;
+
   const userId = getUserId();
-  if (!userId) return;
+  const token  = sessionStorage.getItem('slc_token');
+
+  if (!userId || !token) {
+    // Not logged in — auth guard will redirect, but just in case
+    document.getElementById('holdings-tbody').innerHTML =
+      `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--red);">Session expired. Please sign in again.</td></tr>`;
+    return;
+  }
+
+  const authHeaders = {
+    'Content-Type':  'application/json',
+    'Authorization': `Bearer ${token}`,
+  };
+
+  const fmt = n => '₹' + Number(n).toLocaleString('en-IN');
 
   // ---- Holdings ----
-  fetch(`${PORTFOLIO}/${userId}`)
+  fetch(`${PORTFOLIO}/${userId}`, { headers: authHeaders })
     .then(r => r.json())
     .then(data => {
-      const tbody = document.querySelector('#tab-holdings tbody');
-      if (!tbody || !data.investments?.length) return;
+      const tbody = document.getElementById('holdings-tbody');
 
-      // Update summary stats from live data
-      const totalInvested    = data.investments.reduce((s, i) => s + Number(i.amount), 0);
-      const totalCurrent     = data.investments.reduce((s, i) => s + Number(i.currentValue || i.amount), 0);
-      const totalEarnings    = totalCurrent - totalInvested;
-      const roi              = totalInvested ? ((totalEarnings / totalInvested) * 100).toFixed(2) : '0.00';
+      // Handle auth error
+      if (data.success === false) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--red);">${data.message || 'Failed to load investments.'}</td></tr>`;
+        return;
+      }
 
-      const fmt = n => '₹' + Number(n).toLocaleString('en-IN');
-      const setVal = (idx, val, color) => {
-        const el = document.querySelectorAll('.ps-val')[idx];
-        if (el) { el.textContent = val; if (color) el.style.color = color; }
-      };
-      setVal(0, fmt(totalInvested));
-      setVal(1, fmt(totalCurrent),  'var(--green)');
-      setVal(2, (totalEarnings >= 0 ? '+' : '') + fmt(totalEarnings), 'var(--green)');
-      setVal(3, roi + '%', 'var(--ms-blue)');
+      const investments = data.investments || data.data || [];
 
-      tbody.innerHTML = data.investments.map(inv => `
+      if (!investments.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text4);">No investments found. <a href="invest.html" style="color:var(--ms-blue)">Make your first investment →</a></td></tr>`;
+        // Zero out stats
+        document.getElementById('stat-invested').textContent = '₹0';
+        document.getElementById('stat-current').textContent  = '₹0';
+        document.getElementById('stat-earnings').textContent = '₹0';
+        document.getElementById('stat-roi').textContent      = '0%';
+        return;
+      }
+
+      // Calculate summary stats
+      const totalInvested = investments.reduce((s, i) => s + Number(i.amount || 0), 0);
+      const totalCurrent  = investments.reduce((s, i) => s + Number(i.currentValue || i.amount || 0), 0);
+      const totalEarnings = totalCurrent - totalInvested;
+      const roi           = totalInvested ? ((totalEarnings / totalInvested) * 100).toFixed(2) : '0.00';
+
+      document.getElementById('stat-invested').textContent = fmt(totalInvested);
+      document.getElementById('stat-current').textContent  = fmt(totalCurrent);
+      document.getElementById('stat-earnings').textContent = (totalEarnings >= 0 ? '+' : '') + fmt(totalEarnings);
+      document.getElementById('stat-roi').textContent      = roi + '%';
+
+      tbody.innerHTML = investments.map(inv => `
         <tr>
-          <td><strong>${inv.fund || 'SoulLink Fund'}</strong></td>
-          <td style="font-size:11px;color:var(--text4)">${inv.date || '—'}</td>
-          <td>${'₹' + Number(inv.amount).toLocaleString('en-IN')}</td>
+          <td><strong>${inv.fund || inv.fundName || 'SoulLink Fund'}</strong></td>
+          <td style="font-size:11px;color:var(--text4)">${inv.date || inv.investedOn || inv.createdAt?.slice(0,10) || '—'}</td>
+          <td>${fmt(inv.amount)}</td>
           <td><span class="badge badge-blue">8% p.m.</span></td>
-          <td style="color:var(--green);font-weight:600">${'₹' + Number(inv.currentValue || inv.amount).toLocaleString('en-IN')}</td>
-          <td style="color:var(--green)">${'+₹' + Number((inv.currentValue || inv.amount) - inv.amount).toLocaleString('en-IN')}</td>
+          <td style="color:var(--green);font-weight:600">${fmt(inv.currentValue || inv.amount)}</td>
+          <td style="color:var(--green)">${'+' + fmt((inv.currentValue || inv.amount) - inv.amount)}</td>
           <td><span class="badge badge-green">${inv.status || 'Active'}</span></td>
         </tr>`).join('');
-
-      // Also populate withdraw fund selector with real funds
-      const sel = document.getElementById('withdrawFund');
-      if (sel) {
-        sel.innerHTML = data.investments.map(inv =>
-          `<option value="${inv.fund}">${inv.fund} (Available: ₹${Number((inv.currentValue||inv.amount) - inv.amount).toLocaleString('en-IN')})</option>`
-        ).join('');
-      }
     })
-    .catch(err => console.error('Investments fetch error:', err));
+    .catch(err => {
+      console.error('Holdings fetch error:', err);
+      document.getElementById('holdings-tbody').innerHTML =
+        `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--red);">Could not load investments. Check your connection.</td></tr>`;
+    });
 
   // ---- Payouts ----
-  fetch(`${PAYOUTS}/${userId}`)
+  fetch(`${PAYOUTS}/${userId}`, { headers: authHeaders })
     .then(r => r.json())
     .then(data => {
-      const tbody = document.querySelector('#tab-payouts tbody');
-      if (!tbody || !data.payouts?.length) return;
-      tbody.innerHTML = data.payouts.map(p => `
+      const tbody = document.getElementById('payouts-tbody');
+      const payouts = data.payouts || data.data || [];
+
+      if (!payouts.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text4);">No payouts yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = payouts.map(p => `
         <tr>
           <td>${p.month || '—'}</td>
-          <td>${p.fund  || '—'}</td>
-          <td>${'₹' + Number(p.amount).toLocaleString('en-IN')}</td>
-          <td>${p.rate  || '8%'}</td>
-          <td style="font-size:11px;color:var(--text4)">${p.date || '—'}</td>
+          <td>${p.fund || p.fundName || '—'}</td>
+          <td>${fmt(p.amount)}</td>
+          <td>${p.rate || '8%'}</td>
+          <td style="font-size:11px;color:var(--text4)">${p.date || p.paidOn || '—'}</td>
           <td><span class="badge ${p.status === 'Paid' ? 'badge-green' : 'badge-blue'}">${p.status || 'Pending'}</span></td>
         </tr>`).join('');
     })
-    .catch(err => console.error('Payouts fetch error:', err));
+    .catch(err => {
+      console.error('Payouts fetch error:', err);
+      document.getElementById('payouts-tbody').innerHTML =
+        `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--red);">Could not load payouts.</td></tr>`;
+    });
 
   // ---- Transactions ----
-  fetch(`${USERS}/${userId}/transactions`)
+  fetch(`${USERS}/${userId}/transactions`, { headers: authHeaders })
     .then(r => r.json())
     .then(data => {
-      const tbody = document.querySelector('#tab-transactions tbody');
-      if (!tbody || !data.transactions?.length) return;
-      tbody.innerHTML = data.transactions.map(t => `
+      const tbody = document.getElementById('transactions-tbody');
+      const transactions = data.transactions || data.data || [];
+
+      if (!transactions.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text4);">No transactions yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = transactions.map(t => `
         <tr>
-          <td><span class="badge ${t.type === 'DEPOSIT' ? 'badge-green' : 'badge-red'}">${t.type}</span></td>
-          <td>${'₹' + Number(t.amount).toLocaleString('en-IN')}</td>
+          <td><span class="badge ${t.type === 'DEPOSIT' ? 'badge-green' : 'badge-red'}">${t.type || '—'}</span></td>
+          <td>${fmt(t.amount)}</td>
           <td>${t.method || '—'}</td>
-          <td style="font-size:11px;color:var(--text4)">${t.reference || '—'}</td>
-          <td style="font-size:11px;color:var(--text4)">${t.date || '—'}</td>
+          <td style="font-size:11px;color:var(--text4)">${t.reference || t.transactionId || '—'}</td>
+          <td style="font-size:11px;color:var(--text4)">${t.date || t.createdAt?.slice(0,10) || '—'}</td>
           <td><span class="badge badge-green">${t.status || 'Confirmed'}</span></td>
         </tr>`).join('');
     })
-    .catch(err => console.error('Transactions fetch error:', err));
+    .catch(err => {
+      console.error('Transactions fetch error:', err);
+      document.getElementById('transactions-tbody').innerHTML =
+        `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--red);">Could not load transactions.</td></tr>`;
+    });
 })();
