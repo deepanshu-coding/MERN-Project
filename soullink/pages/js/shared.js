@@ -294,28 +294,26 @@ async function submitSignup() {
 }
 
 // ============================================================
-// INVEST  →  POST /api/invest
-// Accepts: { fullName, email, aadhaar, pan, amount,
-//            paymentMode, transactionId, userId }
-// Returns: { success, message }
+// INVEST  →  POST /api/investments  (requires Bearer token)
+// Accepts: { amount, fundName, paymentMode, transactionId }
+// Returns: { success, message, data }
 // ============================================================
 async function submitInvest() {
   const get = sel => document.querySelector(sel)?.value?.trim() || '';
 
-  const fullName      = get('input[placeholder="As per Aadhaar"]');
-  const email         = get('input[placeholder="you@example.com"]');
-  const aadhaar       = get('input[placeholder="XXXX XXXX XXXX"]').replace(/\s/g, '');
-  const pan           = get('input[placeholder="ABCDE1234F"]');
   const amount        = get('input[placeholder="Minimum ₹10,000"]');
-  const bankAccount   = get('input[placeholder="Account Number"]');
-  const ifsc          = get('input[placeholder="e.g. BARB0PIYRE"]');
-  const paymentMode   = document.getElementById('payMode')?.value || '';
+  const payModeRaw    = document.getElementById('payMode')?.value || '';
+  // Backend expects 'upi' or 'bank_transfer' — form value 'bank' must be remapped
+  const paymentMode   = payModeRaw === 'bank' ? 'bank_transfer' : payModeRaw;
   const transactionId =
     document.querySelector('input[placeholder="Enter UTR / Transaction ID"]')?.value?.trim() ||
     document.querySelector('input[placeholder="Enter reference number"]')?.value?.trim() || '';
 
-  if (!fullName || !email || !aadhaar || !pan || !amount) {
-    toast('Please fill all personal details', 'error'); return;
+  const token = sessionStorage.getItem('slc_token');
+  if (!token) {
+    toast('Please sign in before submitting an investment', 'error');
+    setTimeout(() => { sessionStorage.setItem('slc_redirect', location.href); location.href = 'login.html'; }, 1200);
+    return;
   }
   if (!paymentMode) {
     toast('Please select a payment mode', 'error'); return;
@@ -333,18 +331,25 @@ async function submitInvest() {
   try {
     const res  = await fetch(`${INVEST}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
       body: JSON.stringify({
-        fullName, email, aadhaar, pan, amount,
-        bankAccount, ifsc, paymentMode, transactionId,
-        userId: getUserId()   // attach userId if already logged in
+        amount:        parseFloat(amount),
+        fundName:      'SoulLink Growth Fund',
+        paymentMode,
+        transactionId,
       })
     });
     const data = await res.json();
-    if (res.ok) {
+    if (res.ok && data.success) {
       toast('Investment request submitted! Verification within 24 hours.', 'success');
+    } else if (res.status === 401) {
+      toast('Session expired. Please sign in again.', 'error');
+      setTimeout(() => { sessionStorage.setItem('slc_redirect', location.href); location.href = 'login.html'; }, 1200);
     } else {
-      toast(data.error || 'Submission failed. Try again.', 'error');
+      toast(data.message || data.error || 'Submission failed. Try again.', 'error');
     }
   } catch (err) {
     console.error(err);
@@ -355,27 +360,26 @@ async function submitInvest() {
 }
 
 // ============================================================
-// WITHDRAW  →  POST /api/withdraw
-// Accepts: { name, email, aadhaar, amount, fund,
-//            purpose, bankAccount, ifsc, userId }
+// WITHDRAW  →  POST /api/withdrawals  (requires Bearer token)
+// Accepts: { amount, withdrawType, investmentId?, remarks }
+// Bank details are pulled from the user's stored profile on backend
 // Returns: { success, message }
 // ============================================================
 async function submitWithdraw() {
   const get = sel => document.querySelector(sel)?.value?.trim() || '';
 
-  const name        = get('input[placeholder="Your registered name"]');
-  const email       = get('input[placeholder="your@email.com"]');
-  const aadhaar     = get('input[placeholder="XXXX XXXX XXXX"]').replace(/\s/g, '');
   const amount      = get('input[placeholder="Min ₹1,000"]');
-  const bankAccount = get('input[placeholder="Your bank account number"]');
-  const ifsc        = get('input[placeholder="Your bank IFSC"]');
-  const fundSel     = document.getElementById('withdrawFund');
   const purposeSel  = document.getElementById('withdrawPurpose');
-  const fund        = fundSel?.value    || '';
-  const purpose     = purposeSel?.value || '';
+  const remarks     = purposeSel?.value || '';
 
-  if (!name || !email || !aadhaar || !amount || !bankAccount || !ifsc) {
-    toast('Please fill all required fields', 'error'); return;
+  const token = sessionStorage.getItem('slc_token');
+  if (!token) {
+    toast('Please sign in before submitting a withdrawal', 'error');
+    setTimeout(() => { sessionStorage.setItem('slc_redirect', location.href); location.href = 'login.html'; }, 1200);
+    return;
+  }
+  if (!amount) {
+    toast('Please enter the withdrawal amount', 'error'); return;
   }
   if (Number(amount) < 1000) {
     toast('Minimum withdrawal amount is ₹1,000', 'error'); return;
@@ -387,17 +391,24 @@ async function submitWithdraw() {
   try {
     const res  = await fetch(`${WITHDRAW}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
       body: JSON.stringify({
-        name, email, aadhaar, amount, fund, purpose,
-        bankAccount, ifsc, userId: getUserId()
+        amount:       parseFloat(amount),
+        withdrawType: 'earnings',
+        remarks,
       })
     });
     const data = await res.json();
-    if (res.ok) {
+    if (res.ok && data.success) {
       toast('Withdrawal request submitted. Processing within 3–5 business days.', 'success');
+    } else if (res.status === 401) {
+      toast('Session expired. Please sign in again.', 'error');
+      setTimeout(() => { sessionStorage.setItem('slc_redirect', location.href); location.href = 'login.html'; }, 1200);
     } else {
-      toast(data.error || 'Request failed. Try again.', 'error');
+      toast(data.message || data.error || 'Request failed. Try again.', 'error');
     }
   } catch (err) {
     console.error(err);
