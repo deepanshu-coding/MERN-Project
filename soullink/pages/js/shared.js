@@ -123,11 +123,11 @@ function logout() {
       <span style="font-size:12px;color:var(--ms-blue);padding:0 8px;font-weight:600;">
         ${getUser()}
       </span>
-      <button class="btn btn-outline" onclick="logout()">Sign out</button>`;
+      <button class="btn btn-outline" onclick="logout()">Log out</button>`;
   } else {
     navActions.innerHTML = `
-      <a href="login.html"  style="text-decoration:none"><button class="btn btn-outline">Sign in</button></a>
-      <a href="signup.html" style="text-decoration:none"><button class="btn btn-solid">Sign up</button></a>`;
+      <a href="login.html"  style="text-decoration:none"><button class="btn btn-outline">Log in</button></a>
+      <a href="signup.html" style="text-decoration:none"><button class="btn btn-solid">Register</button></a>`;
   }
 })();
 
@@ -241,12 +241,12 @@ async function verifyLogin() {
       }, 900);
     } else {
       toast(data.message || data.error || 'Invalid credentials. Please try again.', 'error');
-      if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Log in'; }
     }
   } catch (err) {
     console.error(err);
     toast('Network error. Please try again later.', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Log in'; }
   }
 }
 
@@ -297,7 +297,7 @@ async function submitSignup() {
   }
 
   const btn = document.getElementById('signupSubmit');
-  if (btn) { btn.disabled = true; btn.textContent = 'Creating account…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Registering…'; }
 
   try {
     const res = await fetch(`${AUTH}/signup`, {
@@ -328,14 +328,14 @@ async function submitSignup() {
       // Show the exact validation error from backend if available
       const msg = data.message || data.error
         || (data.errors?.[0]?.msg)
-        || 'Sign-up failed. Please try again.';
+        || 'Registration failed. Please try again.';
       toast(msg, 'error');
-      if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Register'; }
     }
   } catch (err) {
     console.error(err);
     toast('Network error. Please try again later.', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Register'; }
   }
 }
 
@@ -526,9 +526,9 @@ async function submitWithdraw() {
       const ks = data.data?.kycStatus || summary?.kycStatus || '';
       if (ks && ks !== 'approved') {
         const kycMsgs = {
-          'pending':      '⏳ KYC Pending — Your documents are queued for verification (24–48 hrs). You cannot invest until approved.',
-          'under_review': '🔍 KYC Under Review — Our team is verifying your documents. You will be notified by email once approved.',
-          'rejected':     '❌ KYC Rejected — Please contact support at soullinkco.pvt.ltd@gmail.com to resolve your KYC.',
+          'pending':      '! KYC Pending — Your documents are queued for verification (24–48 hrs). You cannot invest until approved.',
+          'under_review': '@ KYC Under Review — Our team is verifying your documents. You will be notified by email once approved.',
+          'rejected':     'X KYC Rejected — Please contact support at soullinkco.pvt.ltd@gmail.com to resolve your KYC.',
         };
         kycBanner.textContent = kycMsgs[ks] || 'KYC verification required before investing.';
         kycBanner.style.display = 'block';
