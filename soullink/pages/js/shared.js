@@ -213,7 +213,7 @@ async function verifyLogin() {
   }
 
   const btn = document.getElementById('loginBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Wait..Do not press back button..'; }
 
   try {
     const res  = await fetch(`${AUTH}/login`, {
